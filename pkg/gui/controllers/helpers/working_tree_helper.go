@@ -160,18 +160,16 @@ func (self *WorkingTreeHelper) HandleWIPCommitPress() error {
 func (self *WorkingTreeHelper) HandleCommitPress() error {
 	message := self.contexts.CommitMessage.GetPreservedMessage()
 
-	if message != "" {
-		commitPrefixConfig := self.commitPrefixConfigForRepo()
-		if commitPrefixConfig != nil {
-			prefixPattern := commitPrefixConfig.Pattern
-			prefixReplace := commitPrefixConfig.Replace
-			rgx, err := regexp.Compile(prefixPattern)
-			if err != nil {
-				return self.c.ErrorMsg(fmt.Sprintf("%s: %s", self.c.Tr.LcCommitPrefixPatternError, err.Error()))
-			}
-			prefix := rgx.ReplaceAllString(self.refHelper.GetCheckedOutRef().Name, prefixReplace)
-			message = prefix
+	commitPrefixConfig := self.commitPrefixConfigForRepo()
+	if commitPrefixConfig != nil {
+		prefixPattern := commitPrefixConfig.Pattern
+		prefixReplace := commitPrefixConfig.Replace
+		rgx, err := regexp.Compile(prefixPattern)
+		if err != nil {
+			return self.c.ErrorMsg(fmt.Sprintf("%s: %s", self.c.Tr.LcCommitPrefixPatternError, err.Error()))
 		}
+		prefix := rgx.ReplaceAllString(self.refHelper.GetCheckedOutRef().Name, prefixReplace)
+		message = prefix
 	}
 
 	return self.HandleCommitPressWithMessage(message)
