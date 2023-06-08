@@ -7,7 +7,7 @@ import (
 
 var DiscardChanges = NewIntegrationTest(NewIntegrationTestArgs{
 	Description:  "Discarding all possible permutations of changed files",
-	ExtraCmdArgs: "",
+	ExtraCmdArgs: []string{},
 	Skip:         true, // failing due to index.lock file being created
 	SetupConfig: func(config *config.AppConfig) {
 	},
@@ -51,7 +51,7 @@ var DiscardChanges = NewIntegrationTest(NewIntegrationTestArgs{
 		shell.RunShellCommand(`rm deleted-us.txt && git add deleted-us.txt`)
 		shell.RunShellCommand(`git commit -m "three"`)
 		shell.RunShellCommand(`git reset --hard conflict_second`)
-		shell.RunShellCommandExpectError(`git merge conflict`)
+		shell.RunCommandExpectError([]string{"git", "merge", "conflict"})
 
 		shell.RunShellCommand(`echo "new" > new.txt`)
 		shell.RunShellCommand(`echo "new staged" > new-staged.txt && git add new-staged.txt`)
@@ -85,7 +85,7 @@ var DiscardChanges = NewIntegrationTest(NewIntegrationTestArgs{
 					SelectedLine(Contains(file.status + " " + file.label)).
 					Press(keys.Universal.Remove)
 
-				t.ExpectPopup().Menu().Title(Equals(file.menuTitle)).Select(Contains("discard all changes")).Confirm()
+				t.ExpectPopup().Menu().Title(Equals(file.menuTitle)).Select(Contains("Discard all changes")).Confirm()
 			}
 		}
 
@@ -99,9 +99,13 @@ var DiscardChanges = NewIntegrationTest(NewIntegrationTestArgs{
 			{status: "DU", label: "deleted-us.txt", menuTitle: "deleted-us.txt"},
 		})
 
-		t.Common().ContinueOnConflictsResolved()
+		t.ExpectPopup().Confirmation().
+			Title(Equals("Continue")).
+			Content(Contains("All merge conflicts resolved. Continue?")).
+			Cancel()
 
 		discardOneByOne([]statusFile{
+			{status: "AM", label: "added-changed.txt", menuTitle: "added-changed.txt"},
 			{status: "MD", label: "change-delete.txt", menuTitle: "change-delete.txt"},
 			{status: "D ", label: "delete-change.txt", menuTitle: "delete-change.txt"},
 			{status: "D ", label: "deleted-staged.txt", menuTitle: "deleted-staged.txt"},
@@ -109,11 +113,10 @@ var DiscardChanges = NewIntegrationTest(NewIntegrationTestArgs{
 			{status: "MM", label: "double-modded.txt", menuTitle: "double-modded.txt"},
 			{status: "M ", label: "modded-staged.txt", menuTitle: "modded-staged.txt"},
 			{status: " M", label: "modded.txt", menuTitle: "modded.txt"},
-			// the menu title only includes the new file
-			{status: "R ", label: "renamed.txt → renamed2.txt", menuTitle: "renamed2.txt"},
-			{status: "AM", label: "added-changed.txt", menuTitle: "added-changed.txt"},
 			{status: "A ", label: "new-staged.txt", menuTitle: "new-staged.txt"},
 			{status: "??", label: "new.txt", menuTitle: "new.txt"},
+			// the menu title only includes the new file
+			{status: "R ", label: "renamed.txt → renamed2.txt", menuTitle: "renamed2.txt"},
 		})
 
 		t.Views().Files().IsEmpty()

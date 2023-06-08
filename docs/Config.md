@@ -28,7 +28,8 @@ gui:
   expandFocusedSidePanel: false
   mainPanelSplitMode: 'flexible' # one of 'horizontal' | 'flexible' | 'vertical'
   language: 'auto' # one of 'auto' | 'en' | 'zh' | 'pl' | 'nl' | 'ja' | 'ko'
-  timeFormat: '02 Jan 06 15:04 MST' # https://pkg.go.dev/time#Time.Format
+  timeFormat: '02 Jan 06' # https://pkg.go.dev/time#Time.Format
+  shortTimeFormat: '3:04PM'
   theme:
     activeBorderColor:
       - green
@@ -57,6 +58,7 @@ gui:
   showFileTree: true # for rendering changes files in a tree format
   showListFooter: true # for seeing the '5 of 20' message in list panels
   showRandomTip: true
+  showBranchCommitHash: false # show commit hashes alongside branch names
   experimentalShowBranchHeads: false # visualize branch heads with (*) in commits list
   showBottomLine: true # for hiding the bottom information line (unless it has important information to tell you)
   showCommandLog: true
@@ -88,8 +90,12 @@ git:
     # displays the whole git graph by default in the commits panel (equivalent to passing the `--all` argument to `git log`)
     showWholeGraph: false
   skipHookPrefix: WIP
+  # The main branches. We colour commits green if they belong to one of these branches,
+  # so that you can easily see which commits are unique to your branch (coloured in yellow)
+  mainBranches: [master, main]
   autoFetch: true
   autoRefresh: true
+  fetchAll: true # Pass --all flag when running git fetch. Set to false to fetch only origin (or the current branch's upstream remote if there is one)
   branchLogCmd: 'git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --'
   allBranchesLogCmd: 'git log --graph --all --color=always --abbrev-commit --decorate --date=relative  --pretty=medium'
   overrideGpg: false # prevents lazygit from spawning a separate process when using GPG
@@ -286,7 +292,7 @@ os:
 ```
 
 Supported presets are `vim`, `nvim`, `emacs`, `nano`, `vscode`, `sublime`, `bbedit`,
-`kakoune` and `xcode`. In many cases lazygit will be able to guess the right preset
+`kakoune`, `helix`, and `xcode`. In many cases lazygit will be able to guess the right preset
 from your $(git config core.editor), or an environment variable such as $VISUAL or $EDITOR.
 
 If for some reason you are not happy with the default commands from a preset, or
@@ -344,6 +350,7 @@ The available attributes are:
 - default
 - reverse # useful for high-contrast
 - underline
+- strikethrough
 
 ## Highlighting the selected line
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/OpenPeeDeeP/xdg"
-	yaml "github.com/jesseduffield/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 // AppConfig contains the base configuration fields required for lazygit.
@@ -301,5 +301,9 @@ func getDefaultAppState() *AppState {
 }
 
 func LogPath() (string, error) {
+	if os.Getenv("LAZYGIT_LOG_PATH") != "" {
+		return os.Getenv("LAZYGIT_LOG_PATH"), nil
+	}
+
 	return configFilePath("development.log")
 }

@@ -30,6 +30,7 @@ func (gui *Gui) LogAction(action string) {
 
 	gui.Views.Extras.Autoscroll = true
 
+	gui.GuiLog = append(gui.GuiLog, action)
 	fmt.Fprint(gui.Views.Extras, "\n"+style.FgYellow.Sprint(action))
 }
 
@@ -46,7 +47,7 @@ func (gui *Gui) LogCommand(cmdStr string, commandLine bool) {
 		// we style it differently to communicate that
 		textStyle = style.FgMagenta
 	}
-	gui.CmdLog = append(gui.CmdLog, cmdStr)
+	gui.GuiLog = append(gui.GuiLog, cmdStr)
 	indentedCmdStr := "  " + strings.Replace(cmdStr, "\n", "\n  ", -1)
 	fmt.Fprint(gui.Views.Extras, "\n"+textStyle.Sprint(indentedCmdStr))
 }
@@ -103,7 +104,7 @@ func (gui *Gui) getRandomTip() string {
 		),
 		fmt.Sprintf(
 			"to hard reset onto your current upstream branch, press '%s' in the files panel",
-			formattedKey(config.Files.ViewResetOptions),
+			formattedKey(config.Commits.ViewResetOptions),
 		),
 		fmt.Sprintf(
 			"To push a tag, navigate to the tag in the tags tab and press '%s'",

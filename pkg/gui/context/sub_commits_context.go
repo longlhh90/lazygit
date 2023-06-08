@@ -2,59 +2,80 @@ package context
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/jesseduffield/gocui"
+	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
+	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
 type SubCommitsContext struct {
 	*SubCommitsViewModel
-	*ViewportListContextTrait
+	*ListContextTrait
 	*DynamicTitleBuilder
 }
 
-var _ types.IListContext = (*SubCommitsContext)(nil)
+var (
+	_ types.IListContext    = (*SubCommitsContext)(nil)
+	_ types.DiffableContext = (*SubCommitsContext)(nil)
+)
 
 func NewSubCommitsContext(
-	getModel func() []*models.Commit,
-	view *gocui.View,
-	getDisplayStrings func(startIdx int, length int) [][]string,
-
-	onFocus func(types.OnFocusOpts) error,
-	onRenderToMain func() error,
-	onFocusLost func(opts types.OnFocusLostOpts) error,
-
-	c *types.HelperCommon,
+	c *ContextCommon,
 ) *SubCommitsContext {
 	viewModel := &SubCommitsViewModel{
-		BasicViewModel: NewBasicViewModel(getModel),
-		ref:            nil,
-		limitCommits:   true,
+		BasicViewModel: NewBasicViewModel(
+			func() []*models.Commit { return c.Model().SubCommits },
+		),
+		ref:          nil,
+		limitCommits: true,
+	}
+
+	getDisplayStrings := func(startIdx int, length int) [][]string {
+		selectedCommitSha := ""
+		if c.CurrentContext().GetKey() == SUB_COMMITS_CONTEXT_KEY {
+			selectedCommit := viewModel.GetSelected()
+			if selectedCommit != nil {
+				selectedCommitSha = selectedCommit.Sha
+			}
+		}
+		return presentation.GetCommitListDisplayStrings(
+			c.Common,
+			c.Model().SubCommits,
+			c.State().GetRepoState().GetScreenMode() != types.SCREEN_NORMAL,
+			c.Modes().CherryPicking.SelectedShaSet(),
+			c.Modes().Diffing.Ref,
+			c.UserConfig.Gui.TimeFormat,
+			c.UserConfig.Gui.ShortTimeFormat,
+			time.Now(),
+			c.UserConfig.Git.ParseEmoji,
+			selectedCommitSha,
+			startIdx,
+			length,
+			shouldShowGraph(c),
+			git_commands.NewNullBisectInfo(),
+			false,
+		)
 	}
 
 	return &SubCommitsContext{
 		SubCommitsViewModel: viewModel,
 		DynamicTitleBuilder: NewDynamicTitleBuilder(c.Tr.SubCommitsDynamicTitle),
-		ViewportListContextTrait: &ViewportListContextTrait{
-			ListContextTrait: &ListContextTrait{
-				Context: NewSimpleContext(NewBaseContext(NewBaseContextOpts{
-					View:       view,
-					WindowName: "branches",
-					Key:        SUB_COMMITS_CONTEXT_KEY,
-					Kind:       types.SIDE_CONTEXT,
-					Focusable:  true,
-					Transient:  true,
-				}), ContextCallbackOpts{
-					OnFocus:        onFocus,
-					OnFocusLost:    onFocusLost,
-					OnRenderToMain: onRenderToMain,
-				}),
-				list:              viewModel,
-				getDisplayStrings: getDisplayStrings,
-				c:                 c,
-			},
+		ListContextTrait: &ListContextTrait{
+			Context: NewSimpleContext(NewBaseContext(NewBaseContextOpts{
+				View:       c.Views().SubCommits,
+				WindowName: "branches",
+				Key:        SUB_COMMITS_CONTEXT_KEY,
+				Kind:       types.SIDE_CONTEXT,
+				Focusable:  true,
+				Transient:  true,
+			})),
+			list:                    viewModel,
+			getDisplayStrings:       getDisplayStrings,
+			c:                       c,
+			refreshViewportOnChange: true,
 		},
 	}
 }
@@ -110,4 +131,10 @@ func (self *SubCommitsContext) SetLimitCommits(value bool) {
 
 func (self *SubCommitsContext) GetLimitCommits() bool {
 	return self.limitCommits
+}
+
+func (self *SubCommitsContext) GetDiffTerminals() []string {
+	itemId := self.GetSelectedItemId()
+
+	return []string{itemId}
 }

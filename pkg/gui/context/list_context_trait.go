@@ -10,19 +10,40 @@ import (
 type ListContextTrait struct {
 	types.Context
 
-	c                 *types.HelperCommon
+	c                 *ContextCommon
 	list              types.IList
 	getDisplayStrings func(startIdx int, length int) [][]string
+	// Alignment for each column. If nil, the default is left alignment
+	columnAlignments []utils.Alignment
+	// Some contexts, like the commit context, will highlight the path from the selected commit
+	// to its parents, because it's ambiguous otherwise. For these, we need to refresh the viewport
+	// so that we show the highlighted path.
+	// TODO: now that we allow scrolling, we should be smarter about what gets refreshed:
+	// we should find out exactly which lines are now part of the path and refresh those.
+	// We should also keep track of the previous path and refresh those lines too.
+	refreshViewportOnChange bool
 }
+
+func (self *ListContextTrait) IsListContext() {}
 
 func (self *ListContextTrait) GetList() types.IList {
 	return self.list
 }
 
 func (self *ListContextTrait) FocusLine() {
-	// we need a way of knowing whether we've rendered to the view yet.
 	self.GetViewTrait().FocusPoint(self.list.GetSelectedLineIdx())
 	self.setFooter()
+
+	if self.refreshViewportOnChange {
+		self.refreshViewport()
+	}
+}
+
+func (self *ListContextTrait) refreshViewport() {
+	startIdx, length := self.GetViewTrait().ViewPortYBounds()
+	displayStrings := self.getDisplayStrings(startIdx, length)
+	content := utils.RenderDisplayStrings(displayStrings, nil)
+	self.GetViewTrait().SetViewPortContent(content)
 }
 
 func (self *ListContextTrait) setFooter() {
@@ -44,13 +65,20 @@ func (self *ListContextTrait) HandleFocus(opts types.OnFocusOpts) error {
 func (self *ListContextTrait) HandleFocusLost(opts types.OnFocusLostOpts) error {
 	self.GetViewTrait().SetOriginX(0)
 
+	if self.refreshViewportOnChange {
+		self.refreshViewport()
+	}
+
 	return self.Context.HandleFocusLost(opts)
 }
 
 // OnFocus assumes that the content of the context has already been rendered to the view. OnRender is the function which actually renders the content to the view
 func (self *ListContextTrait) HandleRender() error {
 	self.list.RefreshSelectedIdx()
-	content := utils.RenderDisplayStrings(self.getDisplayStrings(0, self.list.Len()))
+	content := utils.RenderDisplayStrings(
+		self.getDisplayStrings(0, self.list.Len()),
+		self.columnAlignments,
+	)
 	self.GetViewTrait().SetContent(content)
 	self.c.Render()
 	self.setFooter()

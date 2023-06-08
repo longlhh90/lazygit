@@ -39,6 +39,7 @@ type GuiConfig struct {
 	MainPanelSplitMode          string             `yaml:"mainPanelSplitMode"`
 	Language                    string             `yaml:"language"`
 	TimeFormat                  string             `yaml:"timeFormat"`
+	ShortTimeFormat             string             `yaml:"shortTimeFormat"`
 	Theme                       ThemeConfig        `yaml:"theme"`
 	CommitLength                CommitLengthConfig `yaml:"commitLength"`
 	SkipNoStagedFilesWarning    bool               `yaml:"skipNoStagedFilesWarning"`
@@ -48,6 +49,7 @@ type GuiConfig struct {
 	ShowCommandLog              bool               `yaml:"showCommandLog"`
 	ShowBottomLine              bool               `yaml:"showBottomLine"`
 	ShowIcons                   bool               `yaml:"showIcons"`
+	ShowBranchCommitHash        bool               `yaml:"showBranchCommitHash"`
 	ExperimentalShowBranchHeads bool               `yaml:"experimentalShowBranchHeads"`
 	CommandLogSize              int                `yaml:"commandLogSize"`
 	SplitDiff                   string             `yaml:"splitDiff"`
@@ -76,9 +78,11 @@ type GitConfig struct {
 	Paging              PagingConfig                  `yaml:"paging"`
 	Commit              CommitConfig                  `yaml:"commit"`
 	Merging             MergingConfig                 `yaml:"merging"`
+	MainBranches        []string                      `yaml:"mainBranches"`
 	SkipHookPrefix      string                        `yaml:"skipHookPrefix"`
 	AutoFetch           bool                          `yaml:"autoFetch"`
 	AutoRefresh         bool                          `yaml:"autoRefresh"`
+	FetchAll            bool                          `yaml:"fetchAll"`
 	BranchLogCmd        string                        `yaml:"branchLogCmd"`
 	AllBranchesLogCmd   string                        `yaml:"allBranchesLogCmd"`
 	OverrideGpg         bool                          `yaml:"overrideGpg"`
@@ -356,15 +360,14 @@ type CustomCommand struct {
 }
 
 type CustomCommandPrompt struct {
-	Key string `yaml:"key"`
-
 	// one of 'input', 'menu', 'confirm', or 'menuFromCommand'
-	Type string `yaml:"type"`
-
+	Type  string `yaml:"type"`
+	Key   string `yaml:"key"`
 	Title string `yaml:"title"`
 
-	// this only apply to input prompts
-	InitialValue string `yaml:"initialValue"`
+	// these only apply to input prompts
+	InitialValue string                   `yaml:"initialValue"`
+	Suggestions  CustomCommandSuggestions `yaml:"suggestions"`
 
 	// this only applies to confirm prompts
 	Body string `yaml:"body"`
@@ -377,6 +380,11 @@ type CustomCommandPrompt struct {
 	Filter      string `yaml:"filter"`
 	ValueFormat string `yaml:"valueFormat"`
 	LabelFormat string `yaml:"labelFormat"`
+}
+
+type CustomCommandSuggestions struct {
+	Preset  string `yaml:"preset"`
+	Command string `yaml:"command"`
 }
 
 type CustomCommandMenuOption struct {
@@ -397,7 +405,8 @@ func GetDefaultConfig() *UserConfig {
 			ExpandFocusedSidePanel: false,
 			MainPanelSplitMode:     "flexible",
 			Language:               "auto",
-			TimeFormat:             time.RFC822,
+			TimeFormat:             "02 Jan 06",
+			ShortTimeFormat:        time.Kitchen,
 			Theme: ThemeConfig{
 				ActiveBorderColor:         []string{"green", "bold"},
 				InactiveBorderColor:       []string{"default"},
@@ -418,6 +427,7 @@ func GetDefaultConfig() *UserConfig {
 			ShowRandomTip:               true,
 			ShowIcons:                   false,
 			ExperimentalShowBranchHeads: false,
+			ShowBranchCommitHash:        false,
 			CommandLogSize:              8,
 			SplitDiff:                   "auto",
 			SkipRewordInEditorWarning:   false,
@@ -443,8 +453,10 @@ func GetDefaultConfig() *UserConfig {
 				ShowWholeGraph: false,
 			},
 			SkipHookPrefix:      "WIP",
+			MainBranches:        []string{"master", "main"},
 			AutoFetch:           true,
 			AutoRefresh:         true,
+			FetchAll:            true,
 			BranchLogCmd:        "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --",
 			AllBranchesLogCmd:   "git log --graph --all --color=always --abbrev-commit --decorate --date=relative  --pretty=medium",
 			DisableForcePushing: false,

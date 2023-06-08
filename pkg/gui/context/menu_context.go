@@ -2,13 +2,16 @@ package context
 
 import (
 	"github.com/jesseduffield/generics/slices"
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/keybindings"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
+	"github.com/jesseduffield/lazygit/pkg/utils"
+	"github.com/samber/lo"
 )
 
 type MenuContext struct {
+	c *ContextCommon
+
 	*MenuViewModel
 	*ListContextTrait
 }
@@ -16,37 +19,26 @@ type MenuContext struct {
 var _ types.IListContext = (*MenuContext)(nil)
 
 func NewMenuContext(
-	view *gocui.View,
-
-	c *types.HelperCommon,
-	getOptionsMap func() map[string]string,
-	renderToDescriptionView func(string),
+	c *ContextCommon,
 ) *MenuContext {
-	viewModel := NewMenuViewModel()
-
-	onFocus := func(types.OnFocusOpts) error {
-		selectedMenuItem := viewModel.GetSelected()
-		renderToDescriptionView(selectedMenuItem.Tooltip)
-		return nil
-	}
+	viewModel := NewMenuViewModel(c)
 
 	return &MenuContext{
+		c:             c,
 		MenuViewModel: viewModel,
 		ListContextTrait: &ListContextTrait{
 			Context: NewSimpleContext(NewBaseContext(NewBaseContextOpts{
-				View:                  view,
+				View:                  c.Views().Menu,
 				WindowName:            "menu",
 				Key:                   "menu",
 				Kind:                  types.TEMPORARY_POPUP,
-				OnGetOptionsMap:       getOptionsMap,
 				Focusable:             true,
 				HasUncontrolledBounds: true,
-			}), ContextCallbackOpts{
-				OnFocus: onFocus,
-			}),
+			})),
 			getDisplayStrings: viewModel.GetDisplayStrings,
 			list:              viewModel,
 			c:                 c,
+			columnAlignments:  []utils.Alignment{utils.AlignRight, utils.AlignLeft},
 		},
 	}
 }
@@ -62,13 +54,15 @@ func (self *MenuContext) GetSelectedItemId() string {
 }
 
 type MenuViewModel struct {
+	c         *ContextCommon
 	menuItems []*types.MenuItem
 	*BasicViewModel[*types.MenuItem]
 }
 
-func NewMenuViewModel() *MenuViewModel {
+func NewMenuViewModel(c *ContextCommon) *MenuViewModel {
 	self := &MenuViewModel{
 		menuItems: nil,
+		c:         c,
 	}
 
 	self.BasicViewModel = NewBasicViewModel(func() []*types.MenuItem { return self.menuItems })
@@ -88,9 +82,25 @@ func (self *MenuViewModel) GetDisplayStrings(_startIdx int, _length int) [][]str
 
 	return slices.Map(self.menuItems, func(item *types.MenuItem) []string {
 		displayStrings := item.LabelColumns
-		if showKeys {
-			displayStrings = slices.Prepend(displayStrings, style.FgCyan.Sprint(keybindings.LabelFromKey(item.Key)))
+
+		if !showKeys {
+			return displayStrings
 		}
+
+		// These keys are used for general navigation so we'll strike them out to
+		// avoid confusion
+		reservedKeys := []string{
+			self.c.UserConfig.Keybinding.Universal.Confirm,
+			self.c.UserConfig.Keybinding.Universal.Select,
+			self.c.UserConfig.Keybinding.Universal.Return,
+		}
+		keyLabel := keybindings.LabelFromKey(item.Key)
+		keyStyle := style.FgCyan
+		if lo.Contains(reservedKeys, keyLabel) {
+			keyStyle = style.FgDefault.SetStrikethrough()
+		}
+
+		displayStrings = slices.Prepend(displayStrings, keyStyle.Sprint(keyLabel))
 		return displayStrings
 	})
 }

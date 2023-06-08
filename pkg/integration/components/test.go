@@ -22,7 +22,8 @@ const unitTestDescription = "test test"
 type IntegrationTest struct {
 	name         string
 	description  string
-	extraCmdArgs string
+	extraCmdArgs []string
+	extraEnvVars map[string]string
 	skip         bool
 	setupRepo    func(shell *Shell)
 	setupConfig  func(config *config.AppConfig)
@@ -45,9 +46,10 @@ type NewIntegrationTestArgs struct {
 	// runs the test
 	Run func(t *TestDriver, keys config.KeybindingConfig)
 	// additional args passed to lazygit
-	ExtraCmdArgs string
+	ExtraCmdArgs []string
 	// for when a test is flakey
-	Skip bool
+	ExtraEnvVars map[string]string
+	Skip         bool
 	// to run a test only on certain git versions
 	GitVersion GitVersionRestriction
 }
@@ -112,6 +114,7 @@ func NewIntegrationTest(args NewIntegrationTestArgs) *IntegrationTest {
 		name:         name,
 		description:  args.Description,
 		extraCmdArgs: args.ExtraCmdArgs,
+		extraEnvVars: args.ExtraEnvVars,
 		skip:         args.Skip,
 		setupRepo:    args.SetupRepo,
 		setupConfig:  args.SetupConfig,
@@ -128,8 +131,12 @@ func (self *IntegrationTest) Description() string {
 	return self.description
 }
 
-func (self *IntegrationTest) ExtraCmdArgs() string {
+func (self *IntegrationTest) ExtraCmdArgs() []string {
 	return self.extraCmdArgs
+}
+
+func (self *IntegrationTest) ExtraEnvVars() map[string]string {
+	return self.extraEnvVars
 }
 
 func (self *IntegrationTest) Skip() bool {
